@@ -6,18 +6,36 @@ export default function App() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // ✅ Use env variable
+  const API_URL = import.meta.env.VITE_API_URL;
+
   const fetchData = async () => {
-    if (!url) return alert("Enter playlist URL");
+    if (!url.trim()) {
+      alert("Enter a valid playlist URL");
+      return;
+    }
 
     try {
       setLoading(true);
+
       const res = await axios.post(
-        "http://localhost:5000/api/playlist",
+        `${API_URL}/api/playlist`,
         { url }
       );
+
       setData(res.data);
-    } catch {
-      alert("Error fetching playlist");
+
+    } catch (err) {
+      console.error("ERROR:", err);
+
+      if (err.response?.status === 400) {
+        alert("Invalid playlist URL");
+      } else if (err.response?.status === 404) {
+        alert("Playlist not found or private");
+      } else {
+        alert("Server error. Try again later.");
+      }
+
     } finally {
       setLoading(false);
     }
@@ -26,7 +44,7 @@ export default function App() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
 
-      {/* Main Card */}
+      {/* Card */}
       <div className="w-full max-w-md sm:max-w-lg md:max-w-xl p-6 sm:p-8 rounded-3xl backdrop-blur-xl bg-white/20 border border-white/20 shadow-2xl">
 
         {/* Title */}
@@ -98,7 +116,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Speed Section */}
+            {/* Speeds */}
             <div className="mt-6">
               <h3 className="font-semibold mb-2 text-sm sm:text-base">
                 ⚡ Playback Speeds
