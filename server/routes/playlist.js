@@ -1,5 +1,6 @@
 import express from "express";
 import { extractPlaylistId } from "../utils/extractId.js";
+import { getCache, setCache } from "../utils/cache.js";
 import { 
   getPlaylistDetails, 
   getAllVideoIds, 
@@ -9,7 +10,7 @@ import {
 
 const router = express.Router();
 
-// ✅ Format time (hrs + mins + secs)
+// ✅ Format time
 function formatTime(seconds) {
   const hrs = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
@@ -22,6 +23,7 @@ router.post("/", async (req, res) => {
   try {
     const { url } = req.body;
 
+    // ✅ Validate input
     if (!url) {
       return res.status(400).json({
         success: false,
@@ -38,7 +40,13 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // ✅ Get playlist details
+    // ✅ Check cache AFTER validation
+    const cached = getCache(playlistId);
+    if (cached) {
+      return res.json({ ...cached, cached: true });
+    }
+
+    // ✅ Fetch playlist details
     const details = await getPlaylistDetails(playlistId);
 
     if (!details) {
@@ -48,13 +56,13 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // ✅ Get all video IDs
+    // ✅ Fetch video IDs
     const videoIds = await getAllVideoIds(playlistId);
 
-    // ✅ Get durations
+    // ✅ Fetch durations
     const durations = await getVideoDurations(videoIds);
 
-    // ✅ Convert ISO → seconds and sum
+    // ✅ Calculate total duration
     const totalSeconds = durations.reduce((sum, d) => {
       return sum + convertISOToSeconds(d);
     }, 0);
@@ -72,8 +80,8 @@ router.post("/", async (req, res) => {
       "2x": totalSeconds / 2,
     };
 
-    // ✅ Final response
-    return res.json({
+    // ✅ Prepare result object
+    const result = {
       success: true,
       playlistId,
       title: details.title,
@@ -89,10 +97,17 @@ router.post("/", async (req, res) => {
         "1.5x": formatTime(speeds["1.5x"]),
         "2x": formatTime(speeds["2x"]),
       },
-    });
+    };
+
+    // ✅ Save to cache (IMPORTANT FIX)
+    setCache(playlistId, result);
+
+    // ✅ Send response
+    return res.json(result);
 
   } catch (error) {
     console.error("SERVER ERROR:", error);
+
     return res.status(500).json({
       success: false,
       message: "Server error",
