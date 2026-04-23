@@ -8,107 +8,154 @@ export default function App() {
   const [url, setUrl] = useState("");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [speed, setSpeed] = useState(1);
+  const [speed, setSpeed] = useState(1.5);
+  const [error, setError] = useState("");
 
   const API_URL = import.meta.env.VITE_API_URL;
 
   const fetchData = async () => {
-    if (!url.trim()) return alert("Enter valid URL");
+    if (!url.trim()) {
+      setError("Please enter a playlist URL");
+      return;
+    }
 
     try {
+      setError("");
       setLoading(true);
 
-      const res = await axios.post(
-        `${API_URL}/api/playlist`,
-        { url }
-      );
+      const res = await axios.post(`${API_URL}/api/playlist`, { url });
+
+      if (!res.data.success) {
+        setError(res.data.message || "Invalid playlist");
+        return;
+      }
 
       setData(res.data);
 
-    } catch (err) {
-      alert("Error fetching playlist");
+    } catch {
+      setError("Failed to fetch playlist. Check URL or try again.");
     } finally {
       setLoading(false);
     }
   };
 
- const totalSeconds = Number(data?.totalSeconds) || 0;
+  const totalSeconds = Number(data?.totalSeconds) || 0;
 
- const dynamicHours = totalSeconds
-  ? (totalSeconds / 3600 / speed).toFixed(1)
-  : 0;
+  const dynamicHours = totalSeconds
+    ? (totalSeconds / 3600 / speed).toFixed(1)
+    : 0;
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
+    <div className="min-h-screen bg-[#05010a] text-white flex flex-col justify-between">
 
-      <div className="w-full max-w-xl p-6 rounded-3xl backdrop-blur-xl bg-white/20 shadow-2xl">
+      {/* Background Glow */}
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-pink-900/10 to-indigo-900/20 blur-3xl opacity-40"></div>
 
-        <h1 className="text-2xl text-white text-center font-bold mb-4">
-          🎬 Playlist Analyzer
-        </h1>
+      {/* MAIN */}
+      <div className="relative z-10 flex flex-col items-center justify-center flex-1 px-4 pt-20 sm:pt-28">
 
-        <input
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="Paste playlist URL..."
-          className="w-full p-3 rounded-lg mb-3"
-        />
-
-        <button
-          onClick={fetchData}
-          className="w-full bg-purple-600 text-white py-3 rounded-lg"
-        >
-          {loading ? "Loading..." : "Analyze"}
-        </button>
-
-        {/* Speed */}
-        {data && (
-          <SpeedControl speed={speed} setSpeed={setSpeed} />
+        {/* HERO */}
+        {!data && (
+          <div className="text-center mb-10 animate-fadeIn">
+            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">
+              Playlist <span className="text-purple-400">Analyzer</span>
+            </h1>
+            <p className="text-gray-400 mt-3 text-sm sm:text-base">
+              Analyze • Optimize • Track your learning efficiently
+            </p>
+          </div>
         )}
 
-        {/* Results */}
+        {/* INPUT CARD */}
+        <div className="w-full max-w-xl bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-xl shadow-lg transition hover:shadow-purple-500/20">
+
+          <input
+            value={url}
+            onChange={(e) => {
+              setUrl(e.target.value);
+              setError("");
+            }}
+            placeholder="Paste YouTube playlist URL..."
+            className={`w-full p-3 bg-transparent outline-none text-white placeholder-gray-400 border rounded-lg transition
+              ${error ? "border-red-500" : "border-white/10"}
+            `}
+          />
+
+          {/* ERROR MESSAGE */}
+          {error && (
+            <p className="text-red-400 text-sm mt-2 animate-fadeIn">
+              ⚠️ {error}
+            </p>
+          )}
+
+          <button
+            onClick={fetchData}
+            disabled={loading}
+            className="w-full mt-4 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:scale-[1.02] active:scale-[0.98] transition font-semibold"
+          >
+            {loading ? "Analyzing..." : "Analyze Playlist"}
+          </button>
+        </div>
+
+        {/* RESULT */}
         {data && (
-          <>
-            <img
-              src={data.thumbnail}
-              className="mt-4 rounded-xl"
-            />
+          <div className="mt-12 w-full max-w-3xl animate-fadeUp">
 
-            <h2 className="text-white mt-2">{data.title}</h2>
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-xl">
 
-            {/* Cards */}
-            <div className="grid grid-cols-2 gap-3 mt-4">
+             {/* THUMBNAIL */}
+<div className="relative mb-6 flex justify-center">
 
-              <StatsCard
-                icon="📹"
-                label="Videos"
-                value={data.totalVideos}
-              />
+  <div className="relative w-full max-w-2xl">
 
-              <StatsCard
-                icon="⏱"
-                label="Total"
-                value={data.totalDuration}
-              />
+    {/* Glow */}
+    <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 blur-xl opacity-25 rounded-xl"></div>
 
-              <StatsCard
-                icon="📊"
-                label="Average"
-                value={data.averageVideoDuration}
-              />
+    {/* Image */}
+    <div className="relative aspect-video rounded-xl overflow-hidden border border-white/10 shadow-md">
+      <img
+        src={data.thumbnail}
+        alt="thumbnail"
+        className="w-full h-full object-cover transition duration-500 hover:scale-105"
+      />
+    </div>
 
-              <StatsCard
-                icon="⚡"
-                label={`At ${speed}x`}
-                value={`${dynamicHours}h`}
-              />
+  </div>
+</div>
+              {/* TITLE */}
+              <h2 className="text-xl font-semibold leading-snug">
+                {data.title}
+              </h2>
+
+              <p className="text-gray-400 text-sm mb-5">
+                YouTube Playlist
+              </p>
+
+              {/* SPEED */}
+              <SpeedControl speed={speed} setSpeed={setSpeed} />
+
+              {/* STATS */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
+
+                <StatsCard icon="📹" label="Videos" value={data.totalVideos} />
+                <StatsCard icon="⏱" label="Total Time" value={data.totalDuration} />
+                <StatsCard icon="📊" label="Average" value={data.averageVideoDuration} />
+                <StatsCard icon="⚡" label={`At ${speed}x`} value={`${dynamicHours}h`} />
+
+              </div>
+
+              {/* PLANNER */}
+              <WatchPlanner totalSeconds={totalSeconds} />
+
             </div>
-
-            {/* Planner */}
-            <WatchPlanner totalSeconds={totalSeconds} />
-          </>
+          </div>
         )}
       </div>
+
+      {/* FOOTER */}
+      <footer className="text-center text-gray-500 text-sm py-6 border-t border-white/10">
+        © {new Date().getFullYear()} Playlist Analyzer • Made with ❤️ by Prakash Salapu
+      </footer>
     </div>
   );
 }
