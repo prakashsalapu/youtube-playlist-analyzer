@@ -88,6 +88,7 @@ router.post("/", async (req, res) => {
       thumbnail: details.thumbnail,
       totalVideos: videoIds.length,
 
+      totalSeconds,
       totalDuration: formatTime(totalSeconds),
       averageVideoDuration: formatTime(avgSeconds),
 

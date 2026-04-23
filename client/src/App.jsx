@@ -1,19 +1,19 @@
 import { useState } from "react";
 import axios from "axios";
+import StatsCard from "./components/StatsCard";
+import SpeedControl from "./components/SpeedControl";
+import WatchPlanner from "./components/WatchPlanner";
 
 export default function App() {
   const [url, setUrl] = useState("");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [speed, setSpeed] = useState(1);
 
-  // ✅ Use env variable
   const API_URL = import.meta.env.VITE_API_URL;
 
   const fetchData = async () => {
-    if (!url.trim()) {
-      alert("Enter a valid playlist URL");
-      return;
-    }
+    if (!url.trim()) return alert("Enter valid URL");
 
     try {
       setLoading(true);
@@ -26,115 +26,87 @@ export default function App() {
       setData(res.data);
 
     } catch (err) {
-      console.error("ERROR:", err);
-
-      if (err.response?.status === 400) {
-        alert("Invalid playlist URL");
-      } else if (err.response?.status === 404) {
-        alert("Playlist not found or private");
-      } else {
-        alert("Server error. Try again later.");
-      }
-
+      alert("Error fetching playlist");
     } finally {
       setLoading(false);
     }
   };
 
+ const totalSeconds = Number(data?.totalSeconds) || 0;
+
+ const dynamicHours = totalSeconds
+  ? (totalSeconds / 3600 / speed).toFixed(1)
+  : 0;
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
 
-      {/* Card */}
-      <div className="w-full max-w-md sm:max-w-lg md:max-w-xl p-6 sm:p-8 rounded-3xl backdrop-blur-xl bg-white/20 border border-white/20 shadow-2xl">
+      <div className="w-full max-w-xl p-6 rounded-3xl backdrop-blur-xl bg-white/20 shadow-2xl">
 
-        {/* Title */}
-        <h1 className="text-2xl sm:text-3xl font-bold text-center text-white mb-6">
+        <h1 className="text-2xl text-white text-center font-bold mb-4">
           🎬 Playlist Analyzer
         </h1>
 
-        {/* Input */}
         <input
-          type="text"
-          placeholder="Paste YouTube Playlist URL..."
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          className="w-full p-3 sm:p-4 rounded-xl bg-white/30 text-white placeholder-gray-200 outline-none border border-white/30 focus:ring-2 focus:ring-pink-400 text-sm sm:text-base"
+          placeholder="Paste playlist URL..."
+          className="w-full p-3 rounded-lg mb-3"
         />
 
-        {/* Button */}
         <button
           onClick={fetchData}
-          className="w-full mt-4 py-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold hover:scale-[1.02] transition"
+          className="w-full bg-purple-600 text-white py-3 rounded-lg"
         >
-          {loading ? "Analyzing..." : "Analyze Playlist"}
+          {loading ? "Loading..." : "Analyze"}
         </button>
 
-        {/* Loader */}
-        {loading && (
-          <div className="mt-4 text-center text-white animate-pulse text-sm">
-            ⏳ Fetching playlist data...
-          </div>
+        {/* Speed */}
+        {data && (
+          <SpeedControl speed={speed} setSpeed={setSpeed} />
         )}
 
-        {/* Result */}
+        {/* Results */}
         {data && (
-          <div className="mt-6 text-white">
-
-            {/* Thumbnail */}
+          <>
             <img
               src={data.thumbnail}
-              alt="thumbnail"
-              className="w-full rounded-xl mb-4 shadow-lg"
+              className="mt-4 rounded-xl"
             />
 
-            {/* Title */}
-            <h2 className="text-base sm:text-lg font-semibold mb-2">
-              {data.title}
-            </h2>
+            <h2 className="text-white mt-2">{data.title}</h2>
 
-            {/* Stats */}
-            <div className="grid grid-cols-2 gap-3 text-xs sm:text-sm mt-4">
+            {/* Cards */}
+            <div className="grid grid-cols-2 gap-3 mt-4">
 
-              <div className="bg-white/20 p-3 rounded-xl">
-                📹 Videos
-                <p className="font-bold">{data.totalVideos}</p>
-              </div>
+              <StatsCard
+                icon="📹"
+                label="Videos"
+                value={data.totalVideos}
+              />
 
-              <div className="bg-white/20 p-3 rounded-xl">
-                ⏱ Total
-                <p className="font-bold">{data.totalDuration}</p>
-              </div>
+              <StatsCard
+                icon="⏱"
+                label="Total"
+                value={data.totalDuration}
+              />
 
-              <div className="bg-white/20 p-3 rounded-xl">
-                📊 Avg
-                <p className="font-bold">{data.averageVideoDuration}</p>
-              </div>
+              <StatsCard
+                icon="📊"
+                label="Average"
+                value={data.averageVideoDuration}
+              />
 
-              <div className="bg-white/20 p-3 rounded-xl">
-                ⚡ 2x Speed
-                <p className="font-bold">{data.playbackTime["2x"]}</p>
-              </div>
+              <StatsCard
+                icon="⚡"
+                label={`At ${speed}x`}
+                value={`${dynamicHours}h`}
+              />
             </div>
 
-            {/* Speeds */}
-            <div className="mt-6">
-              <h3 className="font-semibold mb-2 text-sm sm:text-base">
-                ⚡ Playback Speeds
-              </h3>
-
-              <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm">
-                {Object.entries(data.playbackTime).map(([k, v]) => (
-                  <div
-                    key={k}
-                    className="bg-white/20 p-2 rounded-lg text-center"
-                  >
-                    {k} → {v}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-          </div>
+            {/* Planner */}
+            <WatchPlanner totalSeconds={totalSeconds} />
+          </>
         )}
       </div>
     </div>
